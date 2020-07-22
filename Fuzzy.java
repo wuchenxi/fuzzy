@@ -4,6 +4,30 @@ import java.util.*;
 public class Fuzzy
 {
     public static BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
+    private static int parse_args(int curarg, String [] args, ArrayList <Integer> idx_left, ArrayList <Integer> idx_right, ArrayList <Double> idx_weight, ArrayList <Integer> col_left, ArrayList <Integer> col_right){
+	while(isint(args[curarg])){
+	    idx_left.add(Integer.parseInt(args[curarg])-1);
+	    idx_right.add(Integer.parseInt(args[curarg+1])-1);
+	    idx_weight.add(Double.parseDouble(args[curarg+2]));
+	    curarg+=3;
+	}
+	if(args[curarg].equals("-cl")){
+	    curarg+=1;
+	    while(isint(args[curarg])){
+		col_left.add(Integer.parseInt(args[curarg])-1);
+		curarg+=1;
+	    }
+	}
+	if(args[curarg].equals("-cr")){
+	    curarg+=1;
+	    while(isint(args[curarg])){
+	        col_right.add(Integer.parseInt(args[curarg])-1);
+		curarg+=1;
+	    }
+	}
+	return curarg;
+    }
+    
     public static void main(String[] args){
 	try{
 	    if(args[0].equals("-h")){
@@ -11,24 +35,37 @@ public class Fuzzy
 		file.print_header();
 	    }
 	    else if(args[0].equals("-c")){
-		int idx_left=Integer.parseInt(args[1])-1;
-		int idx_right=Integer.parseInt(args[2])-1;
-		Table file_left=get_file(args[3]);
-		Table file_right=get_file(args[4]);
-		ArrayList<SortedSet <String>> leftcol=tokenize(file_left.get_col(idx_left));
-		ArrayList<SortedSet <String>> rightcol=tokenize(file_right.get_col(idx_right));
-		Map<String, Integer> word_freq=get_freq(rightcol);
-		double [] matching_score=new double[rightcol.size()];
-		int [] matching_result=new int[leftcol.size()];
-		for(int i=0; i<leftcol.size(); i++){
-		    for(int j=0; j<rightcol.size(); j++){
-			matching_score[j]=get_score(leftcol.get(i), rightcol.get(j), word_freq);
-		    }
-		    matching_result[i]=interact(i, matching_score, file_left, file_right);
+		ArrayList <Integer> idx_left=new ArrayList <Integer> ();
+		ArrayList <Integer> idx_right=new ArrayList <Integer> ();
+		ArrayList <Double> idx_weight=new ArrayList <Double> ();
+		ArrayList <Integer> col_left=new ArrayList <Integer> ();
+		ArrayList <Integer> col_right=new ArrayList <Integer> ();
+		int curarg=1;
+		curarg=parse_args(curarg, args, idx_left, idx_right, idx_weight, col_left, col_right);
+		Table file_left=get_file(args[curarg]);
+		Table file_right=get_file(args[curarg+1]);
+		ArrayList <ArrayList<SortedSet <String>>> leftcols=new ArrayList <ArrayList<SortedSet <String>>>();
+		ArrayList <ArrayList<SortedSet <String>>> rightcols=new ArrayList<ArrayList<SortedSet <String>>>();
+		ArrayList <Map<String, Integer>> word_freqs=new ArrayList <Map<String, Integer>>();
+		for(int i=0; i<idx_left.size(); i++){
+		    leftcols.add(tokenize(file_left.get_col(idx_left.get(i))));
+		    rightcols.add(tokenize(file_right.get_col(idx_right.get(i))));
+		    word_freqs.add(get_freq(rightcols.get(i)));
 		}
-		BufferedWriter out=new BufferedWriter(new FileWriter(args[5]));
+		double [] matching_score=new double[rightcols.get(0).size()];
+		int [] matching_result=new int[leftcols.get(0).size()];
+		for(int i=0; i<leftcols.get(0).size(); i++){
+		    for(int j=0; j<rightcols.get(0).size(); j++){
+			matching_score[j]=0;
+			for(int k=0; k<idx_left.size(); k++){
+			    matching_score[j]+=get_score(leftcols.get(k).get(i), rightcols.get(k).get(j), word_freqs.get(k))*idx_weight.get(k);
+			}
+		    }
+		    matching_result[i]=interact(i, matching_score, file_left, file_right, col_left, col_right);
+		}
+		BufferedWriter out=new BufferedWriter(new FileWriter(args[curarg+2]));
 		String out_str=""+matching_result[0];
-		for(int i=1; i<leftcol.size(); i++){
+		for(int i=1; i<leftcols.get(0).size(); i++){
 		    out_str+=","+matching_result[i];
 		}
 		out.write(out_str);
@@ -38,31 +75,53 @@ public class Fuzzy
 	}	    
     }
 
-    private static int interact(int i, double [] score, Table left, Table right) throws IOException {
+    private static boolean isint(String str){
+	return str.matches("\\d+");
+    }
+
+    private static int interact(int i, double [] score, Table left, Table right, ArrayList <Integer> col_left, ArrayList <Integer> col_right) throws IOException {
 	int r=-1;
 	while(true){
-	    int max_id=0;
-	    double max_val=0;
-	    for(int j=0; j<score.length; j++){
-		if(score[j]>max_val){
-		    max_id=j;
-		    max_val=score[j];
+	    int [] max_id=new int [10];
+	    double [] max_val=new double [10];
+	    for(int k=0; k<10; k++){
+		max_id[k]=0;
+	        max_val[k]=-1;
+	        for(int j=0; j<score.length; j++){
+		    if(score[j]>max_val[k]){
+			boolean found=false;
+			for(int l=0; l<k; l++){
+			    if(max_id[l]==j){
+				found=true;
+				break;
+			    }
+			}
+			if(found==false){
+			    max_id[k]=j;
+			    max_val[k]=score[j];
+			}
+		    }
 		}
 	    }	    
 	    System.out.println("Row on Left Table:");
-	    left.print_row(i);
-	    System.out.println("Row on Right Table:");
-	    right.print_row(max_id);
-	    String in=input("y: yes, n: no, d: done");
+	    left.print_row_sel(i, col_left);
+	    System.out.println("Rows on Right Table:");
+	    for(int k=0; k<10; k++){
+		System.out.println("Row "+k+":");
+		right.print_row_sel(max_id[k], col_right);
+	    }
+	    String in=input("0-9: found correct row, n: no, d: done");
 	    char c=in.charAt(0);
-	    if(c=='y'){
-		 return max_id;
+	    if(c>='0' && c<='9'){
+		 return max_id[c-'0'];
 	    }
 	    else if(c=='d'){
 	        return -1;
 	    }
 	    else{
-	        score[max_id]=-1;
+		for(int j=0; j<10; j++){
+	            score[max_id[j]]=-1;
+		}
 	    }	    
 	}
     }
@@ -210,6 +269,15 @@ class Table{
 	String out=row.get(0);
 	for(int i=1;i<row.size();i++){
 	    out+="; "+row.get(i);
+	}
+	System.out.println(out);
+    }
+
+    public void print_row_sel(int c, ArrayList <Integer> idx){
+	ArrayList <String> row=content.get(c);
+	String out=row.get(idx.get(0));
+	for(int i=1; i<idx.size(); i++){
+	    out+="; "+row.get(idx.get(i));
 	}
 	System.out.println(out);
     }
