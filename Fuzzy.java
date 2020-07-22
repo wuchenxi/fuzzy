@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.*;
+import javax.swing.JOptionPane;
 
 public class Fuzzy
 {
@@ -102,20 +103,17 @@ public class Fuzzy
 			}
 		    }
 		}
-	    }	    
-	    System.out.println("Row on Left Table:");
-	    left.print_row_sel(i, col_left);
-	    System.out.println("Rows on Right Table:");
+	    }
+	    String txt="Left Table:\n"+left.row_to_str_sel(i, col_left)+"\nRight Table:";
 	    for(int k=0; k<10; k++){
-		System.out.println("Row "+k+":");
-		right.print_row_sel(max_id[k], col_right);
+		txt+="\n"+k+":"+right.row_to_str_sel(max_id[k], col_right);
 	    }
-	    String in=input("0-9: found correct row, n: no, d: done");
-	    char c=in.charAt(0);
-	    if(c>='0' && c<='9'){
-		 return max_id[c-'0'];
+	    String [] options={"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "done", "next"};
+	    int option=JOptionPane.showOptionDialog(null,  txt, "", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
+	    if(option>=0 && option<=9){
+		 return max_id[option];
 	    }
-	    else if(c=='d'){
+	    else if(option==10){
 	        return -1;
 	    }
 	    else{
@@ -273,13 +271,13 @@ class Table{
 	System.out.println(out);
     }
 
-    public void print_row_sel(int c, ArrayList <Integer> idx){
+    public String row_to_str_sel(int c, ArrayList <Integer> idx){
 	ArrayList <String> row=content.get(c);
 	String out=row.get(idx.get(0));
 	for(int i=1; i<idx.size(); i++){
 	    out+="; "+row.get(idx.get(i));
 	}
-	System.out.println(out);
+	return out;
     }
     
     public ArrayList<String> get_col(int c){
