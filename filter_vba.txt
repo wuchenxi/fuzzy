@@ -1,11 +1,13 @@
-Function Filt(r1 As range, r As range, threshold As Integer) As Variant()
+'Usage Example: {=Filt(A1:A6, A1:A3, 2)}
+
+Function GetFreq(r As range, threshold As Integer) As String()
 
 'find high frequency words
 Dim highfreq() As String
 ReDim highfreq(0)
 Dim wordfreqs As Object
 Set wordfreqs = CreateObject("Scripting.Dictionary")
-For Each cell In r1
+For Each cell In r
   wl = Split(cell)
   For Each wrd In wl:
      wrd = UCase(wrd)
@@ -22,40 +24,47 @@ For Each k In wordfreqs.Keys
     ReDim Preserve highfreq(UBound(highfreq) + 1)
   End If
 Next k
+GetFreq = highfreq
+End Function
 
+Function FiltWrds(r As range, ByRef wl0() As String) As String()
+
+'check if wl0 is empty
+Dim isempty As Boolean
+If UBound(wl0) = 0 Then
+  isempty = True
+Else
+  isempty = False
+  ReDim Preserve wl0(UBound(wl0) - 1)
+End If
+
+'turn into upper case and filter
 Dim a() As String
 ReDim a(0)
-'if no high frequency word found, do nothing
-If UBound(highfreq) = 0 Then
-  For Each cell In r
-    wl = Split(cell)
-    For i = 0 To UBound(wl)
-      wl(i) = UCase(wl(i))
-    Next i
-    a(UBound(a)) = Join(wl, " ")
-    ReDim Preserve a(UBound(a) + 1)
-  Next cell
-  ReDim Preserve a(UBound(a) - 1)
-  Filt = Application.Transpose(a)
-Else
-  ReDim Preserve highfreq(UBound(highfreq) - 1)
-
-  'turn into upper case and filter
-  For Each cell In r
-    wl = Split(cell)
-    For i = 0 To UBound(wl)
-      For Each wrd In highfreq
-         wl(i) = UCase(wl(i))
+For Each cell In r
+  wl = Split(cell)
+  For i = 0 To UBound(wl)
+    wl(i) = UCase(wl(i))
+    If isempty = False Then
+      For Each wrd In wl0
          If wl(i) = wrd Then
             wl(i) = ""
             Exit For
          End If
       Next wrd
-    Next i
-    a(UBound(a)) = Join(wl, " ")
-    ReDim Preserve a(UBound(a) + 1)
-  Next cell
-  ReDim Preserve a(UBound(a) - 1)
-  Filt = Application.Transpose(a)
-End If
+    End If
+  Next i
+  a(UBound(a)) = Join(wl, " ")
+  ReDim Preserve a(UBound(a) + 1)
+Next cell
+ReDim Preserve a(UBound(a) - 1)
+FiltWrds = a
 End Function
+
+Function Filt(r As range, r1 As range, threshold As Integer) As Variant()
+Dim wl0() As String
+wl0 = GetFreq(r1, threshold)
+Filt = Application.Transpose(FiltWrds(r, wl0))
+End Function
+
+
