@@ -1,0 +1,61 @@
+Function Filt(r1 As range, r As range, threshold As Integer) As Variant()
+
+'find high frequency words
+Dim highfreq() As String
+ReDim highfreq(0)
+Dim wordfreqs As Object
+Set wordfreqs = CreateObject("Scripting.Dictionary")
+For Each cell In r1
+  wl = Split(cell)
+  For Each wrd In wl:
+     wrd = UCase(wrd)
+     If wordfreqs.Exists(wrd) Then
+       wordfreqs(wrd) = wordfreqs(wrd) + 1
+     Else
+       wordfreqs.Add wrd, 1
+     End If
+  Next wrd
+Next cell
+For Each k In wordfreqs.Keys
+  If wordfreqs(k) >= threshold Then
+    highfreq(UBound(highfreq)) = k
+    ReDim Preserve highfreq(UBound(highfreq) + 1)
+  End If
+Next k
+
+Dim a() As String
+ReDim a(0)
+'if no high frequency word found, do nothing
+If UBound(highfreq) = 0 Then
+  For Each cell In r
+    wl = Split(cell)
+    For i = 0 To UBound(wl)
+      wl(i) = UCase(wl(i))
+    Next i
+    a(UBound(a)) = Join(wl, " ")
+    ReDim Preserve a(UBound(a) + 1)
+  Next cell
+  ReDim Preserve a(UBound(a) - 1)
+  Filt = Application.Transpose(a)
+Else
+  ReDim Preserve highfreq(UBound(highfreq) - 1)
+
+  'turn into upper case and filter
+  For Each cell In r
+    wl = Split(cell)
+    For i = 0 To UBound(wl)
+      For Each wrd In highfreq
+         wl(i) = UCase(wl(i))
+         If wl(i) = wrd Then
+            wl(i) = ""
+            Exit For
+         End If
+      Next wrd
+    Next i
+    a(UBound(a)) = Join(wl, " ")
+    ReDim Preserve a(UBound(a) + 1)
+  Next cell
+  ReDim Preserve a(UBound(a) - 1)
+  Filt = Application.Transpose(a)
+End If
+End Function
