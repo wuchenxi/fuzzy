@@ -1,0 +1,45 @@
+Function Sumlen(s1 As String, s2 As String)
+Sumlen = Len(s1) + Len(s2)
+End Function
+
+Function Simil(s1 As String, s2 As String)
+Simil = 2# * Commlen(s1, s2) / Sumlen(s1, s2)
+End Function
+
+Function Commlen(s1, s2) As Integer
+Dim maxlen, nextmaxlen, pos1, pos2, tmp As Integer
+If Len(s1) = 0 Or Len(s2) = 0 Then
+Commlen = 0
+End If
+maxlen = 0
+For i = 1 To Len(s1)
+ nextmaxlen = maxlen
+ For j = maxlen + 1 To Len(s1) - i + 1
+  tmp = InStr(s2, Mid(s1, i, j))
+  If tmp > 0 Then
+    nextmaxlen = j
+    pos2 = tmp
+  Else
+    Exit For
+  End If
+ Next j
+ If nextmaxlen > maxlen Then
+  maxlen = nextmaxlen
+  pos1 = i
+ End If
+Next i
+If maxlen = 0 Then
+ Commlen = 0
+Else
+Dim newlen As Integer
+newlen = 0
+If pos1 > 1 And pos2 > 1 Then
+ newlen = newlen + Commlen(Mid(s1, 1, pos1 - 1), Mid(s2, 1, pos2 - 1))
+End If
+If pos1 + maxlen <= Len(s1) And pos2 + maxlen <= Len(s2) Then
+ newlen = newlen + Commlen(Mid(s1, pos1 + maxlen, Len(s1) - pos1 - maxlen + 1), _
+ Mid(s2, pos2 + maxlen, Len(s2) - pos2 - maxlen + 1))
+End If
+Commlen = maxlen + newlen
+End If
+End Function
